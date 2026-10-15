@@ -1,0 +1,100 @@
+import { Card } from "../components/card.slint";
+import { ScrollView } from "std-widgets.slint";
+import { TableRow } from "../components/table.slint";
+import { Theme } from "../theme.slint";
+
+export component TalkersCard inherits Card {
+    in property <[TableRow]> talkers: [];
+    heading: "TOP TALKERS";
+    HorizontalLayout {
+        height: 14px;
+        spacing: Theme.gap-md;
+        Text {
+            text: "DEVICE";
+            color: Theme.text-faint;
+            font-size: Theme.fs-2xs;
+            font-weight: 700;
+            horizontal-stretch: 1;
+        }
+
+        Text {
+            text: "MAC";
+            color: Theme.text-faint;
+            font-size: Theme.fs-2xs;
+            font-weight: 700;
+            preferred-width: 118px;
+            min-width: 110px;
+        }
+
+        Text {
+            text: "DOWN";
+            color: Theme.text-faint;
+            font-size: Theme.fs-2xs;
+            font-weight: 700;
+            preferred-width: 74px;
+            min-width: 62px;
+            horizontal-alignment: right;
+        }
+
+        Text {
+            text: "UP";
+            color: Theme.text-faint;
+            font-size: Theme.fs-2xs;
+            font-weight: 700;
+            preferred-width: 74px;
+            min-width: 62px;
+            horizontal-alignment: right;
+        }
+    }
+
+    ScrollView {
+        height: Math.min(Math.max(0px, root.talkers.length * 26px - 6px), 600px);
+        enabled: root.talkers.length * 26px - 6px > 600px;
+        mouse-drag-pan-enabled: root.talkers.length * 26px - 6px > 600px;
+        VerticalLayout {
+            spacing: Theme.gap-sm;
+            for row in root.talkers: HorizontalLayout {
+                height: 20px;
+                spacing: Theme.gap-md;
+                Text {
+                    text: row.c1;
+                    color: Theme.text;
+                    font-size: Theme.fs-sm;
+                    horizontal-stretch: 1;
+                    min-width: 90px;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c2;
+                    color: Theme.text-subtle;
+                    font-size: Theme.fs-xs;
+                    preferred-width: 118px;
+                    min-width: 110px;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c3;
+                    color: Theme.accent;
+                    font-size: Theme.fs-sm;
+                    preferred-width: 74px;
+                    min-width: 62px;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c4;
+                    color: Theme.success;
+                    font-size: Theme.fs-sm;
+                    preferred-width: 74px;
+                    min-width: 62px;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

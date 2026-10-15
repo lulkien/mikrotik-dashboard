@@ -1,0 +1,12 @@
+// The heading every card wears, so the shell and every card agree on one style.
+import { Theme } from "../theme.slint";
+
+export component CardHeading inherits Text {
+    in property <string> label: "";
+    text: root.label;
+    color: Theme.text-subtle;
+    font-size: Theme.fs-xs;
+    font-weight: 700;
+    letter-spacing: Theme.tracking-wider;
+    height: 14px;
+}

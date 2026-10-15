@@ -1,0 +1,188 @@
+import { Card } from "../components/card.slint";
+import { ScrollView } from "std-widgets.slint";
+import { TableRow } from "../components/table.slint";
+import { Theme } from "../theme.slint";
+
+export component ConnectionsCard inherits Card {
+    in property <length> src-content: Math.max(0px, self.top-src.length * 24px - 6px);
+    in property <length> dst-content: Math.max(0px, self.top-dst.length * 24px - 6px);
+    in property <length> src-height: Math.min(self.src-content, 194px);
+    in property <length> dst-height: Math.min(self.dst-content, 194px);
+    in property <int> conn-total: 0;
+    in property <float> conn-tcp: 1;
+    in property <float> conn-udp: 1;
+    in property <float> conn-icmp: 1;
+    in property <float> conn-other: 1;
+    in property <string> conn-tcp-text: "0";
+    in property <string> conn-udp-text: "0";
+    in property <string> conn-icmp-text: "0";
+    in property <string> conn-other-text: "0";
+    in property <[TableRow]> top-src: [];
+    in property <[TableRow]> top-dst: [];
+    heading: "CONNECTIONS";
+// 670 (column) - 120 (latency) - 12 (gutter).
+HorizontalLayout {
+        height: 34px;
+        spacing: Theme.gap-md;
+        Text {
+            text: root.conn-total;
+            color: Theme.text;
+            font-size: Theme.fs-4xl;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: "total";
+            color: Theme.text-subtle;
+            font-size: Theme.fs-sm;
+            vertical-alignment: bottom;
+            height: 26px;
+        }
+    }
+
+    Rectangle {
+        height: 8px;
+        border-radius: Theme.radius-sm;
+        background: Theme.track;
+        HorizontalLayout {
+            Rectangle {
+                horizontal-stretch: root.conn-tcp;
+                background: Theme.pink;
+            }
+
+            Rectangle {
+                horizontal-stretch: root.conn-udp;
+                background: Theme.warning;
+            }
+
+            Rectangle {
+                horizontal-stretch: root.conn-icmp;
+                background: Theme.accent;
+            }
+
+            Rectangle {
+                horizontal-stretch: root.conn-other;
+                background: Theme.text-subtle;
+            }
+        }
+    }
+
+    HorizontalLayout {
+        height: 16px;
+        spacing: 10px;
+        Text {
+            text: "TCP " + root.conn-tcp-text;
+            color: Theme.pink;
+            font-size: Theme.fs-xs;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: "UDP " + root.conn-udp-text;
+            color: Theme.warning;
+            font-size: Theme.fs-xs;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: "ICMP " + root.conn-icmp-text;
+            color: Theme.accent;
+            font-size: Theme.fs-xs;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: "OTHER " + root.conn-other-text;
+            color: Theme.text-subtle;
+            font-size: Theme.fs-xs;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+
+    Text {
+        text: "TOP SOURCES";
+        color: Theme.text-subtle;
+        font-size: Theme.fs-2xs;
+        font-weight: 700;
+        letter-spacing: Theme.tracking;
+        height: 14px;
+    }
+
+    ScrollView {
+        height: root.src-height;
+        enabled: root.src-content > 194px;
+        mouse-drag-pan-enabled: root.src-content > 194px;
+        VerticalLayout {
+            spacing: Theme.gap-sm;
+            for row in root.top-src: HorizontalLayout {
+                height: 18px;
+                spacing: Theme.gap-md;
+                Text {
+                    text: row.c1;
+                    color: Theme.text-strong;
+                    font-size: Theme.fs-sm;
+                    horizontal-stretch: 1;
+                    min-width: 60px;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c2;
+                    color: Theme.text-muted;
+                    font-size: Theme.fs-sm;
+                    preferred-width: 40px;
+                    min-width: 28px;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+
+    Text {
+        text: "TOP DESTINATIONS";
+        color: Theme.text-subtle;
+        font-size: Theme.fs-2xs;
+        font-weight: 700;
+        letter-spacing: Theme.tracking;
+        height: 14px;
+    }
+
+    ScrollView {
+        height: root.dst-height;
+        enabled: root.dst-content > 194px;
+        mouse-drag-pan-enabled: root.dst-content > 194px;
+        VerticalLayout {
+            spacing: Theme.gap-sm;
+            for row in root.top-dst: HorizontalLayout {
+                height: 18px;
+                spacing: Theme.gap-md;
+                Text {
+                    text: row.c1;
+                    color: Theme.text-strong;
+                    font-size: Theme.fs-sm;
+                    horizontal-stretch: 1;
+                    min-width: 60px;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c2;
+                    color: Theme.text-muted;
+                    font-size: Theme.fs-sm;
+                    preferred-width: 40px;
+                    min-width: 28px;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

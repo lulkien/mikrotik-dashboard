@@ -102,7 +102,7 @@ Two mappings are worth knowing:
   otherwise be an alphabetical list of zeroes.
 - **The WAN interface is picked, not configured**: the interface whose comment names it
   as the WAN, else the running `pppoe-out*`, else the one holding the default route.
-  `--wan` overrides it.
+  `--interface` overrides it.
 
 ## 4. Deliberately not read
 

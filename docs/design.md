@@ -65,8 +65,41 @@ connection and restarts the reconnect loop.
 Rates: `rx-byte`/`tx-byte` from `/interface/print` are kept per interface with the
 instant they were read, and the delta over elapsed time is the rate. The WAN
 interface is the running PPPoE one, else the one whose comment contains `WAN`, else
-the first running `ether*`; `--wan` overrides. History is a 60-sample deque per
+the first running `ether*`; `--interface` overrides. History is a 60-sample deque per
 direction, so the chart is a 60-second window once warm.
+
+## The UI: tokens, components, cards, layout
+
+The Slint sources are laid out like a small front-end project, so a change to the
+palette or a primitive does not mean editing every card:
+
+```text
+ui/theme.slint          design tokens: colour, radius, spacing steps, type scale
+ui/components/          primitives any card is built from
+  card.slint            the card shell: panel, heading, slot
+  pill.slint            a status capsule
+  stat.slint            a labelled figure
+  card-heading.slint    the one heading style every card wears
+  table.slint           the row shape the table cards take
+  iface-card.slint      the interface table (used twice: real and virtual)
+ui/cards/               one file per card, composed from the primitives
+ui/layout/              the window chrome: header bar, status line
+ui/dashboard.slint      the shell: chrome, the three columns, the wiring
+```
+
+Rules that keep it navigable:
+
+- **No colour, radius, spacing or font size outside `theme.slint`.** A hex value in a
+  card is a missing token.
+- **A card owns its markup, the shell owns its geometry.** Card components declare the
+  values they draw (`SystemCard` takes three arcs, three percentages and three info
+  lines) and the columns pin their height (`height: 226px`), because the column budgets
+  the vertical space, not the card.
+- **Primitives never know a card by name.** `IfaceCard` gets rows; the shell decides
+  whether they are the real interfaces or the virtual ones.
+- **Components inherit their element directly** (`Card inherits Rectangle`,
+  `StatusLine inherits Text`) rather than wrapping one: an extra inner element costs a
+  border in layout and silently shifts everything below it by 2px.
 
 ## The 1920x1080 grid
 
@@ -133,6 +166,19 @@ Table columns use `min-width`/`preferred-width`, not `width`: inside a Slint lay
 (the first render of this dashboard did exactly that, on the Network card's address
 column).
 
+## One interface, two cards
+
+`--interface IFACE` names the interface both traffic cards follow: the Traffic chart's
+curve and rates, and the Bandwidth gauges, all read from that one interface and it is
+named in the Traffic card's heading. Without the flag the poller charts the detected
+uplink (a running `pppoe*`, else the interface whose comment says WAN, else the first
+running ether).
+
+A name the router does not have — an interface deleted since the last launch, or a typo —
+is reported as `interface: no interface named <name>` and the uplink is charted instead.
+That is `charted_iface()` in `poll.rs`, unit-tested for all three cases, because a typo
+that silently charts zeroes would look exactly like a dead link.
+
 ## The simulator, and why it is a socket
 
 `ros::sim` is a real TCP server speaking the real protocol: it parses sentences,
@@ -149,6 +195,9 @@ the dashboard uses and prints what came back, so the framing, login, proplist
 filtering, rate deltas and trap handling are all exercised without hardware.
 
 ## Headless checks
+
+`--probe` prints the same numbers the window draws, the traffic rates and the gauges
+included, so "which interface is this card on" is answerable without a display.
 
 | command | what it proves |
 |---|---|

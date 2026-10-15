@@ -1,0 +1,30 @@
+// A labelled figure: the label above, the value below, fixed-width so a wide value
+// cannot feed back into the layout.
+import { Theme } from "../theme.slint";
+
+export component StatBlock inherits VerticalLayout {
+    in property <string> label: "";
+    in property <string> value: "";
+    in property <color> tint: Theme.text;
+    spacing: Theme.gap-xs;
+    // A fixed cell: the value's own width must not feed back into the layout.
+    preferred-width: 140px;
+    min-width: 120px;
+    Text {
+        text: root.label;
+        color: Theme.text-subtle;
+        font-size: Theme.fs-2xs;
+        font-weight: 700;
+        letter-spacing: Theme.tracking;
+        height: 12px;
+    }
+
+    Text {
+        text: root.value;
+        color: root.tint;
+        font-size: Theme.fs-lg;
+        font-weight: 700;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}

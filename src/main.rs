@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         target: opts.target.clone(),
         user: opts.user.clone(),
         password: opts.password.clone(),
-        wan: opts.wan.clone(),
+        interface: opts.interface.clone(),
         ping_target: opts.ping.clone(),
         link_mbps: opts.link_mbps,
     };
@@ -198,11 +198,21 @@ fn frame_summary(s: &Snapshot, frames: u32) -> String {
     ));
     out.push_str(&format!(
         "traffic      {} rx {} · tx {} · peak rx {} · {:.0}s of samples\n",
-        s.wan,
+        s.traffic_iface,
         fmt_rate(s.rx_mbps),
         fmt_rate(s.tx_mbps),
         fmt_rate(s.rx_peak),
         s.rx_hist.len() as f64 * s.iface_interval_secs
+    ));
+    // Printed because the gauges read the same rates as the chart: one interface feeds
+    // both cards, and a probe should be able to show that.
+    out.push_str(&format!(
+        "bandwidth    down {} ({:.1}%) · up {} ({:.1}%) of {} Mbps\n",
+        fmt_rate(s.rx_mbps),
+        model::pct((s.rx_mbps * 1000.0) as u64, (s.link_mbps * 1000.0) as u64),
+        fmt_rate(s.tx_mbps),
+        model::pct((s.tx_mbps * 1000.0) as u64, (s.link_mbps * 1000.0) as u64),
+        s.link_mbps
     ));
     out.push_str(&format!(
         "connections  {} total · tcp {} · udp {} · icmp {} · other {}\n",
@@ -283,6 +293,8 @@ fn apply(ui: &DashboardWindow, s: &Snapshot) {
     // Traffic: the chart's ceiling is the peak in the window plus headroom, so a
     // quiet minute does not flatten a busy one into the axis.
     ui.set_wan_name(s.wan.clone().into());
+
+    ui.set_traffic_iface(s.traffic_iface.clone().into());
     ui.set_rx_now(fmt_rate(s.rx_mbps).into());
     ui.set_tx_now(fmt_rate(s.tx_mbps).into());
     ui.set_rx_peak(fmt_rate(s.rx_peak).into());
@@ -303,6 +315,8 @@ fn apply(ui: &DashboardWindow, s: &Snapshot) {
     ui.set_tx_area(model::area_path(&s.tx_hist, ceiling, 1000.0, 240.0).into());
     ui.set_tx_line(model::line_path(&s.tx_hist, ceiling, 1000.0, 240.0).into());
 
+    // The gauges are the same rates as the chart: one interface, named in the Traffic
+    // heading, feeds both cards.
     ui.set_dl_pct(model::pct((s.rx_mbps * 1000.0) as u64, (s.link_mbps * 1000.0) as u64) as f32);
     ui.set_ul_pct(model::pct((s.tx_mbps * 1000.0) as u64, (s.link_mbps * 1000.0) as u64) as f32);
     ui.set_dl_text(fmt_rate(s.rx_mbps).into());
@@ -472,7 +486,7 @@ struct Options {
     target: String,
     user: String,
     password: String,
-    wan: Option<String>,
+    interface: Option<String>,
     ping: String,
     link_mbps: f64,
     screenshot: Option<String>,
@@ -487,7 +501,7 @@ impl Options {
             target: "127.0.0.1:8728".to_string(),
             user: "mikdash".to_string(),
             password: String::new(),
-            wan: None,
+            interface: None,
             ping: "1.1.1.1".to_string(),
             link_mbps: 300.0,
             screenshot: None,
@@ -518,7 +532,7 @@ impl Options {
                     o.password = std::env::var(&var)
                         .map_err(|_| format!("environment variable {var} is not set"))?;
                 }
-                "--wan" => o.wan = Some(value("--wan", &mut i)?),
+                "--interface" => o.interface = Some(value("--interface", &mut i)?),
                 "--ping" => o.ping = value("--ping", &mut i)?,
                 "--screenshot" => o.screenshot = Some(value("--screenshot", &mut i)?),
                 "--link-mbps" => {
@@ -549,7 +563,7 @@ fn print_usage() {
          --target HOST:PORT     RouterOS API endpoint (default 127.0.0.1:8728)\n  \
          --user NAME            API user (default mikdash)\n  \
          --password-env VAR     read the API password from VAR (falls back to MIKDASH_PASSWORD)\n  \
-         --wan IFACE            interface the Traffic card charts (default: detected)\n  \
+         --interface IFACE      interface both traffic cards follow (default: the WAN)\n  \
          --ping HOST            ping target for the Latency card (default 1.1.1.1)\n  \
          --link-mbps N          uplink speed the Bandwidth gauges scale to (default 300)\n  \
          --probe                headless: poll and print one frame, then exit\n  \

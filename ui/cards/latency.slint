@@ -1,0 +1,74 @@
+import { Card } from "../components/card.slint";
+import { StatBlock } from "../components/stat.slint";
+import { Theme } from "../theme.slint";
+
+export component LatencyCard inherits Card {
+    in property <string> ping-now: "—";
+    in property <string> ping-min: "—";
+    in property <string> ping-avg: "—";
+    in property <string> ping-max: "—";
+    in property <string> ping-loss: "—";
+    in property <string> ping-target: "—";
+    in property <string> ping-path: "";
+    heading: "LATENCY — " + root.ping-target;
+    HorizontalLayout {
+        height: 34px;
+        spacing: Theme.gap-lg;
+    // Five narrow cells: the column is a third of the grid, and a
+    // rate like "123.4 ms" must not push the row past its edge.
+    StatBlock {
+            label: "NOW";
+            value: root.ping-now;
+            tint: Theme.success;
+            min-width: 86px;
+            preferred-width: 100px;
+        }
+
+        StatBlock {
+            label: "MIN";
+            value: root.ping-min;
+            min-width: 86px;
+            preferred-width: 100px;
+        }
+
+        StatBlock {
+            label: "AVG";
+            value: root.ping-avg;
+            min-width: 86px;
+            preferred-width: 100px;
+        }
+
+        StatBlock {
+            label: "MAX";
+            value: root.ping-max;
+            min-width: 86px;
+            preferred-width: 100px;
+        }
+
+        StatBlock {
+            label: "LOSS";
+            value: root.ping-loss;
+            tint: Theme.warning;
+            min-width: 86px;
+            preferred-width: 100px;
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+    }
+
+    Rectangle {
+        vertical-stretch: 1;
+        clip: true;
+        Path {
+            viewbox-width: 600;
+            viewbox-height: 60;
+            fit: ImageFit.fill;
+            commands: root.ping-path;
+            stroke: Theme.success;
+            stroke-width: 2px;
+            fill: transparent;
+        }
+    }
+}

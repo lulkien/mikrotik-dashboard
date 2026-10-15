@@ -1,0 +1,90 @@
+// The header bar: wordmark, identity, link state, and the router's meta on the right.
+import { Theme } from "../theme.slint";
+import { Pill } from "../components/pill.slint";
+
+export component HeaderBar inherits Rectangle {
+    in property <string> identity: "—";
+    in property <string> board: "";
+    in property <string> router-addr: "";
+    in property <string> ros-version: "";
+    in property <string> uptime: "";
+    in property <string> clock: "";
+    in property <string> link-state: "connecting";
+    in property <color> link-tint: Theme.warning;
+
+    // the component root IS the bar: no inner wrapper, which would add its own 2px
+height: 52px;
+    background: Theme.surface;
+    border-radius: Theme.radius-xl;
+    border-width: 1px;
+    border-color: Theme.border;
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 14px;
+        Text {
+            text: "MIKROTIK DASHBOARD";
+            color: Theme.text;
+            font-size: Theme.fs-xl;
+            font-weight: 800;
+            letter-spacing: Theme.gap-xs;
+            vertical-alignment: center;
+        }
+
+        Rectangle {
+            width: 1px;
+            background: Theme.border;
+        }
+
+        Text {
+            text: root.identity + "  ·  " + root.board;
+            color: Theme.text-strong;
+            font-size: Theme.fs-base;
+            vertical-alignment: center;
+        }
+
+        VerticalLayout {
+        // The pill must sit on the row's midline: a plain child of the
+        // row is placed at the top, not centred.
+        horizontal-stretch: 0;
+            alignment: center;
+            Pill {
+                text: "● " + root.link-state;
+                tint: root.link-tint;
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+
+        Text {
+            text: root.router-addr;
+            color: Theme.text-subtle;
+            font-size: Theme.fs-sm;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: "RouterOS " + root.ros-version;
+            color: Theme.text-subtle;
+            font-size: Theme.fs-sm;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: "up " + root.uptime;
+            color: Theme.text-muted;
+            font-size: Theme.fs-sm;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: root.clock;
+            color: Theme.text;
+            font-size: Theme.fs-2xl;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
+    }
+}

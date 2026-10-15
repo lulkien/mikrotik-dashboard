@@ -1,0 +1,128 @@
+// One line per interface, exactly as `/interface print` lists them: flags, name,
+// type, address, rates. The rows scroll instead of being crammed in, so the card can
+// hold a fixed height while the router's list grows.
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card } from "card.slint";
+import { TableRow } from "table.slint";
+
+export component IfaceCard inherits Card {
+    in property <[TableRow]> rows: [];
+    in property <length> scroll-height: 144px;
+    HorizontalLayout {
+        height: 12px;
+        spacing: Theme.gap-sm;
+        Text {
+            text: "FLAGS";
+            color: Theme.text-subtle;
+            font-size: Theme.fs-2xs;
+            preferred-width: 30px;
+            min-width: 24px;
+        }
+
+        Text {
+            text: "NAME";
+            color: Theme.text-subtle;
+            font-size: Theme.fs-2xs;
+            horizontal-stretch: 1;
+            min-width: 100px;
+        }
+
+        Text {
+            text: "TYPE";
+            color: Theme.text-subtle;
+            font-size: Theme.fs-2xs;
+            preferred-width: 64px;
+        }
+
+        Text {
+            text: "ADDRESS";
+            color: Theme.text-subtle;
+            font-size: Theme.fs-2xs;
+            preferred-width: 140px;
+        }
+
+        Text {
+            text: "RX";
+            color: Theme.text-subtle;
+            font-size: Theme.fs-2xs;
+            preferred-width: 62px;
+            horizontal-alignment: right;
+        }
+
+        Text {
+            text: "TX";
+            color: Theme.text-subtle;
+            font-size: Theme.fs-2xs;
+            preferred-width: 62px;
+            horizontal-alignment: right;
+        }
+    }
+
+    ScrollView {
+        height: Math.min(Math.max(0px, rows.length * 24px - 6px), scroll-height);
+        enabled: rows.length * 24px - 6px > scroll-height;
+        mouse-drag-pan-enabled: rows.length * 24px - 6px > scroll-height;
+        VerticalLayout {
+            spacing: Theme.gap-sm;
+            for row in rows: HorizontalLayout {
+                height: 18px;
+                spacing: Theme.gap-sm;
+                Text {
+                    text: row.c1;
+                    color: row.c7;
+                    font-size: Theme.fs-sm;
+                    preferred-width: 30px;
+                    min-width: 24px;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c2;
+                    color: Theme.text;
+                    font-size: Theme.fs-sm;
+                    horizontal-stretch: 1;
+                    min-width: 100px;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c3;
+                    color: Theme.text-subtle;
+                    font-size: Theme.fs-sm;
+                    preferred-width: 64px;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c4;
+                    color: Theme.text-muted;
+                    font-size: Theme.fs-sm;
+                    preferred-width: 140px;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c5;
+                    color: Theme.accent;
+                    font-size: Theme.fs-sm;
+                    preferred-width: 62px;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: row.c6;
+                    color: Theme.success;
+                    font-size: Theme.fs-sm;
+                    preferred-width: 62px;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

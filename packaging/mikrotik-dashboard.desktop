@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Mikrotik Dashboard
+GenericName=RouterOS dashboard
+Comment=Live RouterOS dashboard, read over the RouterOS binary API
+Exec=/home/kiewn/Projects/mikrotik-dashboard/scripts/run.sh
+Icon=network-wired
+Terminal=false
+Categories=Network;Monitor;
+StartupNotify=true

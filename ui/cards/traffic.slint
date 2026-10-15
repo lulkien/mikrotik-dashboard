@@ -1,0 +1,106 @@
+import { Card } from "../components/card.slint";
+import { StatBlock } from "../components/stat.slint";
+import { Theme } from "../theme.slint";
+
+export component TrafficCard inherits Card {
+    /// The interface this chart follows, named in the heading. Set once at launch
+    /// with `--interface`, else the detected uplink.
+    in property <string> iface-name: "—";
+    in property <string> rx-now: "0";
+    in property <string> tx-now: "0";
+    in property <string> rx-peak: "0";
+    in property <string> tx-peak: "0";
+    in property <string> traffic-window: "60s";
+    in property <string> rx-area: "";
+    in property <string> rx-line: "";
+    in property <string> tx-line: "";
+    heading: "TRAFFIC — " + root.iface-name;
+    HorizontalLayout {
+        height: 26px;
+        spacing: 16px;
+        StatBlock {
+            label: "RX";
+            value: root.rx-now;
+            tint: Theme.accent;
+        }
+
+        StatBlock {
+            label: "TX";
+            value: root.tx-now;
+            tint: Theme.success;
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+
+        Text {
+            text: "peak rx " + root.rx-peak + " · tx " + root.tx-peak;
+            color: Theme.text-faint;
+            font-size: Theme.fs-xs;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+        // Pinned like every other data-dependent cell: the text a
+        // fast-polling card shows must not change how the row shares
+        // its width, or the neighbouring card moves every second.
+        preferred-width: 250px;
+            min-width: 0px;
+            overflow: elide;
+        }
+
+        Text {
+            text: root.traffic-window;
+            color: Theme.text-muted;
+            font-size: Theme.fs-xs;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            preferred-width: 78px;
+            min-width: 0px;
+            overflow: elide;
+        }
+    }
+
+    Rectangle {
+        vertical-stretch: 1;
+        clip: true;
+    // Grid lines: four horizontal rules at 25% steps.
+    for i in [1, 2, 3, 4]: Rectangle {
+            y: (parent.height / 5) * i;
+            height: 1px;
+            width: 100%;
+            background: Theme.border;
+        }
+        Path {
+            viewbox-width: 1000;
+            viewbox-height: 240;
+        // `contain` (the default) would scale uniformly and leave
+        // the plot letterboxed inside the card; the path is built
+        // for a viewbox of this shape, so fill it.
+        fit: ImageFit.fill;
+            commands: root.rx-area;
+            fill: Theme.accent;
+            fill-rule: nonzero;
+            opacity: 0.12;
+        }
+
+        Path {
+            viewbox-width: 1000;
+            viewbox-height: 240;
+            fit: ImageFit.fill;
+            commands: root.rx-line;
+            stroke: Theme.accent;
+            stroke-width: 2px;
+            fill: transparent;
+        }
+
+        Path {
+            viewbox-width: 1000;
+            viewbox-height: 240;
+            fit: ImageFit.fill;
+            commands: root.tx-line;
+            stroke: Theme.success;
+            stroke-width: 2px;
+            fill: transparent;
+        }
+    }
+}

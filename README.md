@@ -10,11 +10,21 @@ binary and one window, with no browser, service or database behind it.
 ## Run it
 
 ```bash
-cargo run --release --bin mikrotik-dashboard -- --demo
+./scripts/run.sh                         # the router in ~/.config/mikdash/api.env
+./scripts/run.sh --demo                  # simulated router, no hardware needed
+./scripts/run.sh --x11                   # force XWayland instead of Wayland
+
 cargo run --release --bin mikrotik-dashboard -- --target 192.0.2.1:8728 --user mikdash --password-env MIKDASH_PASSWORD
+cargo run --release --bin mikrotik-dashboard -- --interface ether5 --demo   # chart one interface
 cargo run --release --bin mikrotik-dashboard -- --probe --demo --seconds 6
 cargo run --release --bin mikrotik-dashboard -- --screenshot frame.ppm --demo --seconds 20
 ```
+
+`scripts/run.sh` resolves the session environment, reads the API password out of its
+config file and execs the binary; it is also what the desktop entry runs. **Wayland is
+the default** — the winit backend prefers it whenever `WAYLAND_DISPLAY` is set and only
+falls back to XWayland when it is not, so the wrapper fills that in before launching.
+See [docs/running.md](docs/running.md).
 
 - `--demo` starts a RouterOS-shaped API server on a local port and points the client
   at it, so framing, login and the poll loop are exercised end to end with no router
@@ -58,7 +68,7 @@ profile — no device assigned to it, so it blocks nothing — is enough:
 
 | card | fed by |
 |---|---|
-| Traffic (RX/TX chart) | `/interface/print` byte deltas on the WAN interface |
+| Traffic (RX/TX chart) | `/interface/print` byte deltas on the interface `--interface` names |
 | Bandwidth (two vertical bars) | the same rates against the link speed |
 | Connections (total, protocol split, top sources/destinations) | `/ip/firewall/connection/print` |
 | System (CPU/RAM/storage gauges, board, version) | `/system/resource/print`, `/system/identity/print` |
@@ -73,6 +83,11 @@ profile — no device assigned to it, so it blocks nothing — is enough:
   device; the slow configuration menus are read once a minute. The Traffic chart
   samples that cadence, so its window is `samples x 5s` and the card states the real
   span rather than assuming one sample a second.
+- **`--interface IFACE` picks what the traffic cards follow** — the chart's curve, its
+  rates and the Bandwidth gauges, all from that one interface, named in the Traffic card's
+  heading. Without the flag it follows the detected uplink. A name the router does not
+  have is reported (`interface: no interface named ether9`) and the uplink is charted
+  instead of a card of zeroes.
 - **Interfaces mirror `/interface print`**: the router's own order, its flags column
   (`R` running, `S` slave, `D` dynamic, `X` disabled) and its own type names. Real
   interfaces (ethers, loopback) and virtual ones (VLANs, bridges, PPPoE) are two
@@ -87,8 +102,10 @@ profile — no device assigned to it, so it blocks nothing — is enough:
 
 ## Documentation
 
-- [docs/design.md](docs/design.md) — the process shape, the 1920x1080 grid, the
-  simulator and the offscreen capture.
+- [docs/running.md](docs/running.md) — starting it (Wayland by default), the launcher,
+  the desktop entry and the credential file.
+- [docs/design.md](docs/design.md) — the process shape, the UI structure, the 1920x1080
+  grid, the simulator and the offscreen capture.
 - [docs/mikrotik-data-path.md](docs/mikrotik-data-path.md) — the wire protocol, the
   subscriptions, and which menu feeds which card.
 

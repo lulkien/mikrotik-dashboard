@@ -1,0 +1,54 @@
+// Design tokens. Every colour, radius, spacing step and type size the dashboard
+// uses lives here; components and cards refer to these names instead of literals, so
+// the palette can be retuned in one place and a stray hex value stands out.
+export global Theme {
+    // surfaces
+    out property <color> bg: #080d16;              // the window behind everything
+    out property <color> surface: #0f172acc;       // cards and the header bar
+    out property <color> border: #1e293b;
+    out property <color> track: #0b1220;           // bar and segment backgrounds
+    out property <color> raised: #17223a;
+
+    // text ramp, brightest to faintest
+    out property <color> text: #e2e8f0;
+    out property <color> text-strong: #cbd5e1;
+    out property <color> text-muted: #94a3b8;
+    out property <color> text-subtle: #64748b;
+    out property <color> text-faint: #475569;
+
+    // accents: one meaning each, used for text and fills alike
+    out property <color> accent: #38bdf8;          // live rates, addresses
+    out property <color> success: #34d399;         // upload, running, healthy
+    out property <color> warning: #fbbf24;         // loss, connecting
+    out property <color> danger: #f87171;          // disabled
+    out property <color> pink: #f472b6;            // TCP
+
+    // radii
+    out property <length> radius-sm: 4px;
+    out property <length> radius-md: 6px;
+    out property <length> radius-lg: 8px;
+    out property <length> radius-xl: 10px;         // cards
+    out property <length> radius-pill: 11px;
+
+    // spacing steps
+    out property <length> gap-xs: 2px;
+    out property <length> gap-sm: 6px;
+    out property <length> gap-md: 8px;
+    out property <length> gap-lg: 12px;
+    out property <length> pad-card: 14px;
+    out property <length> pad-frame: 16px;
+
+    // type scale
+    out property <length> fs-2xs: 10px;            // table headers, stat labels
+    out property <length> fs-xs: 11px;             // card headings, legend, footer
+    out property <length> fs-sm: 12px;             // table body, meta
+    out property <length> fs-base: 13px;           // header identity
+    out property <length> fs-lg: 16px;             // stat values
+    out property <length> fs-xl: 17px;             // wordmark
+    out property <length> fs-2xl: 18px;            // clock
+    out property <length> fs-3xl: 20px;            // bandwidth readings
+    out property <length> fs-4xl: 26px;            // connection total
+    out property <length> tracking: 1px;
+    out property <length> tracking-wider: 1.4px;
+    out property <length> tracking-wide: 2px;
+}

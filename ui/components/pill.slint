@@ -1,0 +1,28 @@
+// A status capsule. Sized by preferred/min size rather than width/height: inside a
+// layout those are ignored and the capsule would stretch across the whole row.
+import { Theme } from "../theme.slint";
+
+export component Pill inherits Rectangle {
+    in property <string> text: "";
+    in property <color> tint: Theme.success;
+    // Inside a layout `width`/`height` are ignored, so the capsule is sized by its
+    // preferred/min size instead — otherwise it is stretched across the whole row.
+    preferred-height: 22px;
+    min-height: 22px;
+    preferred-width: label.preferred-width + 22px;
+    min-width: label.preferred-width + 22px;
+    horizontal-stretch: 0;
+    vertical-stretch: 0;
+    border-radius: Theme.radius-pill;
+    background: root.tint.transparentize(0.85);
+    border-width: 1px;
+    border-color: root.tint.transparentize(0.55);
+    label := Text {
+        text: root.text;
+        color: root.tint;
+        font-size: Theme.fs-xs;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}

@@ -1,0 +1,11 @@
+// The status strip along the bottom: connection, API call count, sweep time.
+import { Theme } from "../theme.slint";
+
+export component StatusLine inherits Text {
+    in property <string> message: "";
+    text: root.message;
+    color: Theme.text-faint;
+    font-size: Theme.fs-xs;
+    height: 14px;
+    vertical-alignment: center;
+}

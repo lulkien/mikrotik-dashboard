@@ -1,0 +1,26 @@
+// The card shell: a translucent panel with a letter-spaced heading and a slot for
+// whatever the card draws. One padding and one gutter for every card on the board.
+import { Theme } from "../theme.slint";
+import { CardHeading } from "card-heading.slint";
+
+export component Card inherits Rectangle {
+    in property <string> heading: "";
+    background: Theme.surface;
+    border-radius: Theme.radius-xl;
+    border-width: 1px;
+    border-color: Theme.border;
+    VerticalLayout {
+        padding: Theme.pad-card;
+        // 6px, not 8: the middle column has to fit three gauges, three info lines,
+        // six interfaces, four key/value lines, five stats and a sparkline inside
+        // 670px, and the System card's last line was landing on its own border.
+        spacing: Theme.gap-sm;
+        // Conditional rather than `visible: false`: an invisible element still holds
+        // its 14px and the 6px gutter around it, which is enough to push a title row
+        // out of line with every other card.
+        if root.heading != "": CardHeading {
+            label: root.heading;
+        }
+        @children
+    }
+}

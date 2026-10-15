@@ -86,8 +86,12 @@ pub struct Snapshot {
     pub disk_total: u64,
 
     // Traffic
+    /// The uplink the router is detected to have; the chart's interface by default.
     pub wan: String,
     pub wan_up: bool,
+    /// The interface both traffic cards follow: `--interface`, else the uplink. Its
+    /// rates are `rx_mbps`/`tx_mbps` and its curve is the history.
+    pub traffic_iface: String,
     pub rx_mbps: f64,
     pub tx_mbps: f64,
     pub rx_peak: f64,
@@ -159,6 +163,7 @@ impl Default for Snapshot {
             wan_up: false,
             rx_mbps: 0.0,
             tx_mbps: 0.0,
+            traffic_iface: String::new(),
             rx_peak: 0.0,
             tx_peak: 0.0,
             rx_hist: VecDeque::new(),

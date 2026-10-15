@@ -51,8 +51,9 @@ pub struct Config {
     pub target: String,
     pub user: String,
     pub password: String,
-    /// Interface to chart; empty picks the PPPoE/ WAN interface.
-    pub wan: Option<String>,
+    /// The interface both traffic cards follow. Unset means the detection below picks
+    /// the uplink instead.
+    pub interface: Option<String>,
     pub ping_target: String,
     pub link_mbps: f64,
 }
@@ -63,7 +64,7 @@ impl Default for Config {
             target: "127.0.0.1:8728".to_string(),
             user: "mikdash".to_string(),
             password: String::new(),
-            wan: None,
+            interface: None,
             ping_target: "1.1.1.1".to_string(),
             link_mbps: 300.0,
         }
@@ -88,6 +89,7 @@ struct Poller {
     next_due: HashMap<String, Instant>,
     /// Subscriptions the router refused permanently (missing menu, no permission).
     disabled: HashMap<String, String>,
+
     last_emit: Instant,
 }
 
@@ -98,7 +100,7 @@ impl Poller {
             target: cfg.target.clone(),
             ping_target: cfg.ping_target.clone(),
             link_mbps: cfg.link_mbps,
-            wan: cfg.wan.clone().unwrap_or_else(|| "(detecting)".to_string()),
+            wan: "(detecting)".to_string(),
             ..Snapshot::default()
         };
         Poller {
@@ -338,7 +340,7 @@ impl Poller {
 
         // The WAN interface is what the Traffic card charts: the one whose comment
         // names it, else the running PPPoE link.
-        if self.cfg.wan.is_none() {
+        {
             let detected = ifaces
                 .iter()
                 .find(|i| i.running && i.name.starts_with("pppoe"))
@@ -360,14 +362,26 @@ impl Poller {
             if let Some(name) = detected {
                 self.snap.wan = name;
             }
-        } else {
-            self.snap.wan = self.cfg.wan.clone().unwrap_or_default();
         }
 
-        if let Some(wan) = ifaces.iter().find(|i| i.name == self.snap.wan) {
-            self.snap.rx_mbps = wan.rx_mbps;
-            self.snap.tx_mbps = wan.tx_mbps;
-            self.snap.wan_up = wan.running;
+        // Both traffic cards follow one interface: `--interface` if the router has it,
+        // else the detected uplink. A name the router does not have (an interface
+        // deleted, or a typo) is reported rather than charted as zeroes.
+        let names: Vec<String> = ifaces.iter().map(|i| i.name.clone()).collect();
+        match charted_iface(self.cfg.interface.as_deref(), &self.snap.wan, &names) {
+            Charted::Named(name) => self.snap.traffic_iface = name,
+            Charted::Fallback(name, missing) => {
+                if !missing.is_empty() && self.snap.traffic_iface != name {
+                    self.snap
+                        .note_error("interface", &format!("no interface named {missing}"));
+                }
+                self.snap.traffic_iface = name;
+            }
+        }
+        if let Some(charted) = ifaces.iter().find(|i| i.name == self.snap.traffic_iface) {
+            self.snap.rx_mbps = charted.rx_mbps;
+            self.snap.tx_mbps = charted.tx_mbps;
+            self.snap.wan_up = charted.running;
         }
         push(&mut self.snap.rx_hist, self.snap.rx_mbps, TRAFFIC_SAMPLES);
         push(&mut self.snap.tx_hist, self.snap.tx_mbps, TRAFFIC_SAMPLES);
@@ -566,6 +580,79 @@ impl Poller {
     ) -> Result<Vec<Reply>, RosError> {
         self.snap.api_calls += 1;
         c.print(path, proplist)
+    }
+}
+
+/// Which interface both traffic cards follow.
+#[derive(Debug, PartialEq)]
+enum Charted {
+    /// The configured interface, and the router has it.
+    Named(String),
+    /// Something else had to stand in: the detected uplink, or the first interface the
+    /// router reported. The field is the name that was not found.
+    Fallback(String, String),
+}
+
+/// `--interface` names the interface; it has to exist. Without it the detected uplink
+/// is charted, and if even that is missing (a router mid-boot, an odd menu reply) the
+/// first interface reported is used so the card shows something true.
+fn charted_iface(configured: Option<&str>, uplink: &str, names: &[String]) -> Charted {
+    if let Some(want) = configured {
+        if names.iter().any(|n| n == want) {
+            return Charted::Named(want.to_string());
+        }
+        let fallback = if !uplink.is_empty() && names.iter().any(|n| n == uplink) {
+            uplink.to_string()
+        } else {
+            names.first().cloned().unwrap_or_default()
+        };
+        return Charted::Fallback(fallback, want.to_string());
+    }
+    if !uplink.is_empty() && names.iter().any(|n| n == uplink) {
+        return Charted::Named(uplink.to_string());
+    }
+    Charted::Fallback(names.first().cloned().unwrap_or_default(), String::new())
+}
+
+#[cfg(test)]
+mod charted_tests {
+    use super::{Charted, charted_iface};
+
+    fn names() -> Vec<String> {
+        ["ether1", "ether5", "pppoe-out1"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    #[test]
+    fn configured_interface_wins_when_the_router_has_it() {
+        assert_eq!(
+            charted_iface(Some("ether5"), "pppoe-out1", &names()),
+            Charted::Named("ether5".to_string())
+        );
+    }
+
+    #[test]
+    fn without_a_flag_the_detected_uplink_is_charted() {
+        assert_eq!(
+            charted_iface(None, "pppoe-out1", &names()),
+            Charted::Named("pppoe-out1".to_string())
+        );
+    }
+
+    #[test]
+    fn a_name_the_router_does_not_have_falls_back_and_says_so() {
+        // --interface typo: chart the uplink, and report the name that was missing
+        assert_eq!(
+            charted_iface(Some("ether9"), "pppoe-out1", &names()),
+            Charted::Fallback("pppoe-out1".to_string(), "ether9".to_string())
+        );
+        // no uplink either: the first interface the router reported
+        assert_eq!(
+            charted_iface(None, "gone", &names()),
+            Charted::Fallback("ether1".to_string(), String::new())
+        );
     }
 }
 

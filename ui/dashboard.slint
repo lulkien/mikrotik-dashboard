@@ -1,167 +1,53 @@
-// Mikrotik Dashboard: the card grid, drawn with Slint on a fixed 1920x1080
-// surface.
+// Mikrotik Dashboard: the shell. Chrome at the top and bottom, the card grid in
+// between, and one wiring line per value a card draws.
 //
-//   Traffic            spans the top, two thirds of the width
-//   Bandwidth          top right
-//   Connections        left column, first
-//   Latency            left column, last
-//   System             middle, first
-//   Interfaces         middle, second
-//   Virtual            middle, last (vlan/bridge/pppoe)
-//   Top Talkers        right column
+//   Traffic             spans the top, two thirds of the width
+//   Bandwidth           top right
+//   Connections         left column, first
+//   Latency             left column, last
+//   System              middle, first
+//   Interfaces          middle, second
+//   Virtual Interfaces  middle, last (vlan/bridge/pppoe)
+//   Top Talkers         right column
 //
-// Interface rows follow `/interface print` — same order, same flags — and split
-// into two cards: the real interfaces (ethers, loopback) and the virtual ones
-// (VLANs, bridges, PPPoE). Lists flick only when they overflow.
+// Interface rows follow `/interface print` — same order, same flags — and split into
+// two cards: the real interfaces (ethers, loopback) and the virtual ones (VLANs,
+// bridges, PPPoE). Lists flick only when they overflow.
 //
-// Every value is an `in` property the Rust poller sets; nothing here reads the
-// router, so the layout can be rendered from a fixture without a connection.
-
-// Only for ScrollView; everything else here is hand-drawn so the card set stays
-// independent of whatever widget theme happens to be compiled in.
-import { ScrollView } from "std-widgets.slint";
-
-export struct TableRow {
-    c1: string,
-    c2: string,
-    c3: string,
-    c4: string,
-    c5: string,
-    c6: string,
-    // Slint strings cannot be searched, so the Interface card's flag colour is
-    // decided in Rust (R green, X red, D blue, S grey) and handed down here.
-    c7: color,
-}
-
-component Pill inherits Rectangle {
-    in property <string> text: "";
-    in property <color> tint: #34d399;
-    // Inside a layout `width`/`height` are ignored, so the capsule is sized by its
-    // preferred/min size instead — otherwise it is stretched across the whole row.
-    preferred-height: 22px;
-    min-height: 22px;
-    preferred-width: label.preferred-width + 22px;
-    min-width: label.preferred-width + 22px;
-    horizontal-stretch: 0;
-    vertical-stretch: 0;
-    border-radius: 11px;
-    background: root.tint.transparentize(0.85);
-    border-width: 1px;
-    border-color: root.tint.transparentize(0.55);
-    label := Text {
-        text: root.text;
-        color: root.tint;
-        font-size: 11px;
-        font-weight: 700;
-        horizontal-alignment: center;
-        vertical-alignment: center;
-    }
-}
-
-component Card inherits Rectangle {
-    in property <string> heading: "";
-    background: #0f172acc;
-    border-radius: 10px;
-    border-width: 1px;
-    border-color: #1e293b;
-    VerticalLayout {
-        padding: 14px;
-        // 6px, not 8: the middle column has to fit three gauges, three info lines,
-        // six interfaces, four key/value lines, five stats and a sparkline inside
-        // 670px, and the System card's last line was landing on its own border.
-        spacing: 6px;
-        Text {
-            text: root.heading;
-            color: #64748b;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1.4px;
-            height: 14px;
-        }
-        @children
-    }
-}
-
-
-/// One line per interface, exactly as `/interface print` lists them: its flags, name,
-/// type, address and rates. The rows scroll instead of being crammed in, so the card
-/// can hold a fixed height while the router's list grows.
-component IfaceCard inherits Card {
-    in property <[TableRow]> rows: [];
-    in property <length> scroll-height: 144px;
-    HorizontalLayout {
-        height: 12px;
-        spacing: 6px;
-        Text { text: "FLAGS"; color: #64748b; font-size: 10px; preferred-width: 30px; min-width: 24px; }
-        Text { text: "NAME"; color: #64748b; font-size: 10px; horizontal-stretch: 1; min-width: 100px; }
-        Text { text: "TYPE"; color: #64748b; font-size: 10px; preferred-width: 64px; }
-        Text { text: "ADDRESS"; color: #64748b; font-size: 10px; preferred-width: 140px; }
-        Text { text: "RX"; color: #64748b; font-size: 10px; preferred-width: 62px; horizontal-alignment: right; }
-        Text { text: "TX"; color: #64748b; font-size: 10px; preferred-width: 62px; horizontal-alignment: right; }
-    }
-    ScrollView {
-        height: Math.min(Math.max(0px, rows.length * 24px - 6px), scroll-height);
-        enabled: rows.length * 24px - 6px > scroll-height;
-        mouse-drag-pan-enabled: rows.length * 24px - 6px > scroll-height;
-        VerticalLayout {
-            spacing: 6px;
-            for row in rows: HorizontalLayout {
-                height: 18px;
-                spacing: 6px;
-                Text { text: row.c1; color: row.c7; font-size: 12px; preferred-width: 30px; min-width: 24px; vertical-alignment: center; }
-                Text { text: row.c2; color: #e2e8f0; font-size: 12px; horizontal-stretch: 1; min-width: 100px; overflow: elide; vertical-alignment: center; }
-                Text { text: row.c3; color: #64748b; font-size: 12px; preferred-width: 64px; overflow: elide; vertical-alignment: center; }
-                Text { text: row.c4; color: #94a3b8; font-size: 12px; preferred-width: 140px; overflow: elide; vertical-alignment: center; }
-                Text { text: row.c5; color: #38bdf8; font-size: 12px; preferred-width: 62px; horizontal-alignment: right; vertical-alignment: center; }
-                Text { text: row.c6; color: #34d399; font-size: 12px; preferred-width: 62px; horizontal-alignment: right; vertical-alignment: center; }
-            }
-        }
-    }
-}
-
-component StatBlock inherits VerticalLayout {
-    in property <string> label: "";
-    in property <string> value: "";
-    in property <color> tint: #e2e8f0;
-    spacing: 2px;
-    // A fixed cell: the value's own width must not feed back into the layout.
-    preferred-width: 140px;
-    min-width: 120px;
-    Text {
-        text: root.label;
-        color: #64748b;
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        height: 12px;
-    }
-    Text {
-        text: root.value;
-        color: root.tint;
-        font-size: 16px;
-        font-weight: 700;
-        vertical-alignment: center;
-        overflow: elide;
-    }
-}
+// Every value is an `in` property the Rust poller sets; nothing here reads the router,
+// so the layout can be rendered from a fixture without a connection.
+import { Theme } from "theme.slint";
+import { IfaceCard } from "components/iface-card.slint";
+import { TableRow } from "components/table.slint";
+import { HeaderBar } from "layout/header.slint";
+import { StatusLine } from "layout/status-line.slint";
+import { TrafficCard } from "cards/traffic.slint";
+import { BandwidthCard } from "cards/bandwidth.slint";
+import { ConnectionsCard } from "cards/connections.slint";
+import { LatencyCard } from "cards/latency.slint";
+import { SystemCard } from "cards/system.slint";
+import { TalkersCard } from "cards/talkers.slint";
 
 export component DashboardWindow inherits Window {
     title: "Mikrotik Dashboard";
     width: 1920px;
     height: 1080px;
-    background: #080d16;
+    background: Theme.bg;
 
     // ── header ────────────────────────────────────────────────────────────────
-    in property <string> identity: "—";
+in property <string> identity: "—";
     in property <string> router-addr: "";
     in property <string> board: "";
     in property <string> ros-version: "";
     in property <string> clock: "";
     in property <string> link-state: "connecting";
-    in property <color> link-tint: #fbbf24;
+    in property <color> link-tint: Theme.warning;
 
     // ── traffic ───────────────────────────────────────────────────────────────
-    in property <string> wan-name: "—";
+in property <string> wan-name: "—";
+/// The interface the Traffic chart and the Bandwidth gauges follow: `--interface`, or
+/// the detected uplink.
+in property <string> traffic-iface: "—";
     in property <string> rx-now: "0";
     in property <string> tx-now: "0";
     in property <string> rx-peak: "0";
@@ -173,29 +59,29 @@ export component DashboardWindow inherits Window {
     in property <string> tx-line: "";
 
     // ── bandwidth ─────────────────────────────────────────────────────────────
-    in property <float> dl-pct: 0;
+in property <float> dl-pct: 0;
     in property <float> ul-pct: 0;
     in property <string> dl-text: "0";
     in property <string> ul-text: "0";
 
     /// The three columns of the dashboard grid are equal by construction.
-    ///
-    /// Leaving it to the layout lets content decide: the tables in Top Talkers and
-    /// WireGuard have wide preferred widths, so they won 892px while System,
-    /// Network and Latency were squeezed into 300px. Pinning all three to the same
-    /// width is the only way they stay equal as the data changes.
-    private property <length> column-width: (self.width - 32px - 24px) / 3;
+///
+/// Leaving it to the layout lets content decide: the tables in Top Talkers and
+/// WireGuard have wide preferred widths, so they won 892px while System,
+/// Network and Latency were squeezed into 300px. Pinning all three to the same
+/// width is the only way they stay equal as the data changes.
+private property <length> column-width: (self.width - 32px - 24px) / 3;
 
     // Every list is flickable, but ONLY when it overflows: a list that fits takes its
-    // own height and reserves no room for a scrollbar. Rows are 18px with a 6px
-    // gutter (24n - 6); Connections gives each list 194px of its 538px card.
-    private property <length> src-content: Math.max(0px, self.top-src.length * 24px - 6px);
+// own height and reserves no room for a scrollbar. Rows are 18px with a 6px
+// gutter (24n - 6); Connections gives each list 194px of its 538px card.
+private property <length> src-content: Math.max(0px, self.top-src.length * 24px - 6px);
     private property <length> dst-content: Math.max(0px, self.top-dst.length * 24px - 6px);
     private property <length> src-height: Math.min(self.src-content, 194px);
     private property <length> dst-height: Math.min(self.dst-content, 194px);
 
     // ── connections ───────────────────────────────────────────────────────────
-    in property <int> conn-total: 0;
+in property <int> conn-total: 0;
     in property <float> conn-tcp: 1;
     in property <float> conn-udp: 1;
     in property <float> conn-icmp: 1;
@@ -208,7 +94,7 @@ export component DashboardWindow inherits Window {
     in property <[TableRow]> top-dst: [];
 
     // ── system ────────────────────────────────────────────────────────────────
-    in property <string> cpu-arc: "";
+in property <string> cpu-arc: "";
     in property <string> ram-arc: "";
     in property <string> disk-arc: "";
     in property <string> cpu-text: "0%";
@@ -219,12 +105,12 @@ export component DashboardWindow inherits Window {
     in property <string> sys-line3: "";
 
     // ── network ───────────────────────────────────────────────────────────────
-    in property <string> uptime: "";
+in property <string> uptime: "";
     in property <[TableRow]> ifaces: [];
     in property <[TableRow]> virtual-ifaces: [];
 
     // ── latency ───────────────────────────────────────────────────────────────
-    in property <string> ping-now: "—";
+in property <string> ping-now: "—";
     in property <string> ping-min: "—";
     in property <string> ping-avg: "—";
     in property <string> ping-max: "—";
@@ -233,489 +119,122 @@ export component DashboardWindow inherits Window {
     in property <string> ping-path: "";
 
     // ── talkers ───────────────────────────────────────────────────────────────
-    in property <[TableRow]> talkers: [];
+in property <[TableRow]> talkers: [];
 
     // ── footer ────────────────────────────────────────────────────────────────
-    in property <string> status: "";
+in property <string> status: "";
 
     VerticalLayout {
-        padding: 16px;
-        spacing: 12px;
+        padding: Theme.pad-frame;
+        spacing: Theme.gap-lg;
 
-        // ── header bar ────────────────────────────────────────────────────────
-        Rectangle {
-            height: 52px;
-            background: #0f172acc;
-            border-radius: 10px;
-            border-width: 1px;
-            border-color: #1e293b;
-            HorizontalLayout {
-                padding-left: 16px;
-                padding-right: 16px;
-                spacing: 14px;
-                Text {
-                    text: "MIKROTIK DASHBOARD";
-                    color: #e2e8f0;
-                    font-size: 17px;
-                    font-weight: 800;
-                    letter-spacing: 2px;
-                    vertical-alignment: center;
-                }
-                Rectangle { width: 1px; background: #1e293b; }
-                Text {
-                    text: root.identity + "  ·  " + root.board;
-                    color: #cbd5e1;
-                    font-size: 13px;
-                    vertical-alignment: center;
-                }
-                VerticalLayout {
-                    // The pill must sit on the row's midline: a plain child of the
-                    // row is placed at the top, not centred.
-                    horizontal-stretch: 0;
-                    alignment: center;
-                    Pill {
-                        text: "● " + root.link-state;
-                        tint: root.link-tint;
-                    }
-                }
-                Rectangle { horizontal-stretch: 1; }
-                Text {
-                    text: root.router-addr;
-                    color: #64748b;
-                    font-size: 12px;
-                    vertical-alignment: center;
-                }
-                Text {
-                    text: "RouterOS " + root.ros-version;
-                    color: #64748b;
-                    font-size: 12px;
-                    vertical-alignment: center;
-                }
-                Text {
-                    text: "up " + root.uptime;
-                    color: #94a3b8;
-                    font-size: 12px;
-                    vertical-alignment: center;
-                }
-                Text {
-                    text: root.clock;
-                    color: #e2e8f0;
-                    font-size: 18px;
-                    font-weight: 700;
-                    vertical-alignment: center;
-                }
-            }
+        HeaderBar {
+            identity: root.identity;
+            board: root.board;
+            router-addr: root.router-addr;
+            ros-version: root.ros-version;
+            uptime: root.uptime;
+            clock: root.clock;
+            link-state: root.link-state;
+            link-tint: root.link-tint;
         }
 
         // ── traffic + bandwidth ───────────────────────────────────────────────
-        HorizontalLayout {
+HorizontalLayout {
             height: 272px;
-            spacing: 12px;
+            spacing: Theme.gap-lg;
 
-            Card {
-                heading: "TRAFFIC — " + root.wan-name;
+            TrafficCard {
+                iface-name: root.traffic-iface;
+                rx-now: root.rx-now;
+                tx-now: root.tx-now;
+                rx-peak: root.rx-peak;
+                tx-peak: root.tx-peak;
+                traffic-window: root.traffic-window;
+                rx-area: root.rx-area;
+                rx-line: root.rx-line;
+                tx-line: root.tx-line;
                 horizontal-stretch: 7;
                 min-width: 0;
-                HorizontalLayout {
-                    height: 26px;
-                    spacing: 16px;
-                    StatBlock { label: "RX"; value: root.rx-now; tint: #38bdf8; }
-                    StatBlock { label: "TX"; value: root.tx-now; tint: #34d399; }
-                    Rectangle { horizontal-stretch: 1; }
-                    Text {
-                        text: "peak rx " + root.rx-peak + " · tx " + root.tx-peak;
-                        color: #475569;
-                        font-size: 11px;
-                        vertical-alignment: center;
-                        horizontal-alignment: right;
-                        // Pinned like every other data-dependent cell: the text a
-                        // fast-polling card shows must not change how the row shares
-                        // its width, or the neighbouring card moves every second.
-                        preferred-width: 250px;
-                        min-width: 0px;
-                        overflow: elide;
-                    }
-                    Text {
-                        text: root.traffic-window;
-                        color: #94a3b8;
-                        font-size: 11px;
-                        vertical-alignment: center;
-                        horizontal-alignment: right;
-                        preferred-width: 78px;
-                        min-width: 0px;
-                        overflow: elide;
-                    }
-                }
-                Rectangle {
-                    vertical-stretch: 1;
-                    clip: true;
-                    // Grid lines: four horizontal rules at 25% steps.
-                    for i in [1, 2, 3, 4]: Rectangle {
-                        y: (parent.height / 5) * i;
-                        height: 1px;
-                        width: 100%;
-                        background: #1e293b;
-                    }
-                    Path {
-                        viewbox-width: 1000;
-                        viewbox-height: 240;
-                        // `contain` (the default) would scale uniformly and leave
-                        // the plot letterboxed inside the card; the path is built
-                        // for a viewbox of this shape, so fill it.
-                        fit: ImageFit.fill;
-                        commands: root.rx-area;
-                        fill: #38bdf8;
-                        fill-rule: nonzero;
-                        opacity: 0.12;
-                    }
-                    Path {
-                        viewbox-width: 1000;
-                        viewbox-height: 240;
-                        fit: ImageFit.fill;
-                        commands: root.rx-line;
-                        stroke: #38bdf8;
-                        stroke-width: 2px;
-                        fill: transparent;
-                    }
-                    Path {
-                        viewbox-width: 1000;
-                        viewbox-height: 240;
-                        fit: ImageFit.fill;
-                        commands: root.tx-line;
-                        stroke: #34d399;
-                        stroke-width: 2px;
-                        fill: transparent;
-                    }
-                }
             }
 
-            Card {
-                heading: "BANDWIDTH";
+            BandwidthCard {
+                dl-pct: root.dl-pct;
+                ul-pct: root.ul-pct;
+                dl-text: root.dl-text;
+                ul-text: root.ul-text;
                 horizontal-stretch: 2;
-                // Two vertical bars do not earn a wide card: pin the width so the
-                // Traffic chart takes the rest (the window is a fixed 1920x1080).
-                // min-width 0 keeps the card's own numbers out of the row's maths.
                 min-width: 0;
-                preferred-width: 360px;
                 max-width: 360px;
-
-                HorizontalLayout {
-                    vertical-stretch: 1;
-                    spacing: 18px;
-
-                    VerticalLayout {
-                        horizontal-stretch: 1;
-                        spacing: 6px;
-                        Text {
-                            text: root.dl-text;
-                            color: #38bdf8;
-                            font-size: 16px;
-                            font-weight: 700;
-                            horizontal-alignment: center;
-                            height: 20px;
-                            // Pinned: a wider reading must not re-share the row.
-                            preferred-width: 160px;
-                            min-width: 0px;
-                            overflow: elide;
-                        }
-                        HorizontalLayout {
-                            vertical-stretch: 1;
-                            Rectangle { horizontal-stretch: 1; }
-                            Rectangle {
-                                // Fixed width: inside a layout `width` would be
-                                // ignored and the bar would span the whole column.
-                                min-width: 72px;
-                                preferred-width: 72px;
-                                max-width: 72px;
-                                vertical-stretch: 1;
-                                background: #0b1220;
-                                border-radius: 8px;
-                                border-width: 1px;
-                                border-color: #1e293b;
-                                // Quarter marks, so the empty height is a scale and
-                                // not just void.
-                                for mark in [25, 50, 75]: Rectangle {
-                                    x: 2px;
-                                    width: parent.width - 4px;
-                                    y: (parent.height - 4px) * (1 - mark / 100) + 2px;
-                                    height: 1px;
-                                    background: #17223a;
-                                }
-                                Rectangle {
-                                    x: 2px;
-                                    width: parent.width - 4px;
-                                    y: parent.height - self.height;
-                                    // A floor keeps a 1% reading a visible sliver.
-                                    height: max((parent.height - 4px) * (root.dl-pct / 100), 3px);
-                                    background: #38bdf8;
-                                    border-radius: 6px;
-                                }
-                            }
-                            Rectangle { horizontal-stretch: 1; }
-                        }
-                        Text {
-                            text: "DOWNLOAD";
-                            color: #64748b;
-                            font-size: 10px;
-                            font-weight: 700;
-                            letter-spacing: 1.2px;
-                            horizontal-alignment: center;
-                            height: 14px;
-                        }
-                    }
-
-                    VerticalLayout {
-                        horizontal-stretch: 1;
-                        spacing: 6px;
-                        Text {
-                            text: root.ul-text;
-                            color: #34d399;
-                            font-size: 16px;
-                            font-weight: 700;
-                            horizontal-alignment: center;
-                            height: 20px;
-                            // Pinned: a wider reading must not re-share the row.
-                            preferred-width: 160px;
-                            min-width: 0px;
-                            overflow: elide;
-                        }
-                        HorizontalLayout {
-                            vertical-stretch: 1;
-                            Rectangle { horizontal-stretch: 1; }
-                            Rectangle {
-                                // Fixed width: inside a layout `width` would be
-                                // ignored and the bar would span the whole column.
-                                min-width: 72px;
-                                preferred-width: 72px;
-                                max-width: 72px;
-                                vertical-stretch: 1;
-                                background: #0b1220;
-                                border-radius: 8px;
-                                border-width: 1px;
-                                border-color: #1e293b;
-                                // Quarter marks, so the empty height is a scale and
-                                // not just void.
-                                for mark in [25, 50, 75]: Rectangle {
-                                    x: 2px;
-                                    width: parent.width - 4px;
-                                    y: (parent.height - 4px) * (1 - mark / 100) + 2px;
-                                    height: 1px;
-                                    background: #17223a;
-                                }
-                                Rectangle {
-                                    x: 2px;
-                                    width: parent.width - 4px;
-                                    y: parent.height - self.height;
-                                    // A floor keeps a 1% reading a visible sliver.
-                                    height: max((parent.height - 4px) * (root.ul-pct / 100), 3px);
-                                    background: #34d399;
-                                    border-radius: 6px;
-                                }
-                            }
-                            Rectangle { horizontal-stretch: 1; }
-                        }
-                        Text {
-                            text: "UPLOAD";
-                            color: #64748b;
-                            font-size: 10px;
-                            font-weight: 700;
-                            letter-spacing: 1.2px;
-                            horizontal-alignment: center;
-                            height: 14px;
-                        }
-                    }
-                }
             }
         }
 
         // ── three columns ─────────────────────────────────────────────────────
-        HorizontalLayout {
+HorizontalLayout {
             vertical-stretch: 1;
-            spacing: 12px;
+            spacing: Theme.gap-lg;
 
             VerticalLayout {
                 horizontal-stretch: 1;
                 min-width: root.column-width;
                 max-width: root.column-width;
-                spacing: 12px;
+                spacing: Theme.gap-lg;
 
-                Card {
-                    heading: "CONNECTIONS";
-                    // 670 (column) - 120 (latency) - 12 (gutter).
+                ConnectionsCard {
+                    src-content: root.src-content;
+                    dst-content: root.dst-content;
+                    src-height: root.src-height;
+                    dst-height: root.dst-height;
+                    conn-total: root.conn-total;
+                    conn-tcp: root.conn-tcp;
+                    conn-udp: root.conn-udp;
+                    conn-icmp: root.conn-icmp;
+                    conn-other: root.conn-other;
+                    conn-tcp-text: root.conn-tcp-text;
+                    conn-udp-text: root.conn-udp-text;
+                    conn-icmp-text: root.conn-icmp-text;
+                    conn-other-text: root.conn-other-text;
+                    top-src: root.top-src;
+                    top-dst: root.top-dst;
                     height: 538px;
-                    HorizontalLayout {
-                        height: 34px;
-                        spacing: 8px;
-                        Text {
-                            text: root.conn-total;
-                            color: #e2e8f0;
-                            font-size: 26px;
-                            font-weight: 700;
-                            vertical-alignment: center;
-                        }
-                        Text {
-                            text: "total";
-                            color: #64748b;
-                            font-size: 12px;
-                            vertical-alignment: bottom;
-                            height: 26px;
-                        }
-                    }
-                    Rectangle {
-                        height: 8px;
-                        border-radius: 4px;
-                        background: #0b1220;
-                        HorizontalLayout {
-                            Rectangle { horizontal-stretch: root.conn-tcp; background: #f472b6; }
-                            Rectangle { horizontal-stretch: root.conn-udp; background: #fbbf24; }
-                            Rectangle { horizontal-stretch: root.conn-icmp; background: #38bdf8; }
-                            Rectangle { horizontal-stretch: root.conn-other; background: #64748b; }
-                        }
-                    }
-                    HorizontalLayout {
-                        height: 16px;
-                        spacing: 10px;
-                        Text { text: "TCP " + root.conn-tcp-text; color: #f472b6; font-size: 11px; font-weight: 600; vertical-alignment: center; }
-                        Text { text: "UDP " + root.conn-udp-text; color: #fbbf24; font-size: 11px; font-weight: 600; vertical-alignment: center; }
-                        Text { text: "ICMP " + root.conn-icmp-text; color: #38bdf8; font-size: 11px; font-weight: 600; vertical-alignment: center; }
-                        Text { text: "OTHER " + root.conn-other-text; color: #64748b; font-size: 11px; font-weight: 600; vertical-alignment: center; }
-                    }
-                    Text { text: "TOP SOURCES"; color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 1px; height: 14px; }
-                    ScrollView {
-                        height: root.src-height;
-                        enabled: root.src-content > 194px;
-                        mouse-drag-pan-enabled: root.src-content > 194px;
-                        VerticalLayout {
-                            spacing: 6px;
-                            for row in root.top-src: HorizontalLayout {
-                                height: 18px;
-                                spacing: 8px;
-                                Text { text: row.c1; color: #cbd5e1; font-size: 12px; horizontal-stretch: 1; min-width: 60px; overflow: elide; vertical-alignment: center; }
-                                Text { text: row.c2; color: #94a3b8; font-size: 12px; preferred-width: 40px; min-width: 28px; horizontal-alignment: right; vertical-alignment: center; }
-                            }
-                        }
-                    }
-                    Text { text: "TOP DESTINATIONS"; color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 1px; height: 14px; }
-                    ScrollView {
-                        height: root.dst-height;
-                        enabled: root.dst-content > 194px;
-                        mouse-drag-pan-enabled: root.dst-content > 194px;
-                        VerticalLayout {
-                            spacing: 6px;
-                            for row in root.top-dst: HorizontalLayout {
-                                height: 18px;
-                                spacing: 8px;
-                                Text { text: row.c1; color: #cbd5e1; font-size: 12px; horizontal-stretch: 1; min-width: 60px; overflow: elide; vertical-alignment: center; }
-                                Text { text: row.c2; color: #94a3b8; font-size: 12px; preferred-width: 40px; min-width: 28px; horizontal-alignment: right; vertical-alignment: center; }
-                            }
-                        }
-                    }
                 }
 
-                    Card {
-                        heading: "LATENCY — " + root.ping-target;
-                        height: 120px;
-                        min-width: 0;
-                        HorizontalLayout {
-                            height: 34px;
-                            spacing: 12px;
-                            // Five narrow cells: the column is a third of the grid, and a
-                            // rate like "123.4 ms" must not push the row past its edge.
-                            StatBlock { label: "NOW"; value: root.ping-now; tint: #34d399; min-width: 86px; preferred-width: 100px; }
-                            StatBlock { label: "MIN"; value: root.ping-min; min-width: 86px; preferred-width: 100px; }
-                            StatBlock { label: "AVG"; value: root.ping-avg; min-width: 86px; preferred-width: 100px; }
-                            StatBlock { label: "MAX"; value: root.ping-max; min-width: 86px; preferred-width: 100px; }
-                            StatBlock { label: "LOSS"; value: root.ping-loss; tint: #fbbf24; min-width: 86px; preferred-width: 100px; }
-                            Rectangle { horizontal-stretch: 1; }
-                        }
-                        Rectangle {
-                            vertical-stretch: 1;
-                            clip: true;
-                            Path {
-                                viewbox-width: 600;
-                                viewbox-height: 60;
-                                fit: ImageFit.fill;
-                                commands: root.ping-path;
-                                stroke: #34d399;
-                                stroke-width: 2px;
-                                fill: transparent;
-                            }
-                        }
-                    }
+                LatencyCard {
+                    ping-now: root.ping-now;
+                    ping-min: root.ping-min;
+                    ping-avg: root.ping-avg;
+                    ping-max: root.ping-max;
+                    ping-loss: root.ping-loss;
+                    ping-target: root.ping-target;
+                    ping-path: root.ping-path;
+                    height: 120px;
+                    min-width: 0;
+                }
             }
 
             VerticalLayout {
                 horizontal-stretch: 1;
                 min-width: root.column-width;
                 max-width: root.column-width;
-                spacing: 12px;
+                spacing: Theme.gap-lg;
 
-                Card {
-                    heading: "SYSTEM";
-                    // heading 14 + gauges 104 + three lines 48 + four 6px gutters
-                    // + 28px padding = 218, plus breathing room.
+                SystemCard {
+                    cpu-arc: root.cpu-arc;
+                    ram-arc: root.ram-arc;
+                    disk-arc: root.disk-arc;
+                    cpu-text: root.cpu-text;
+                    ram-text: root.ram-text;
+                    disk-text: root.disk-text;
+                    sys-line1: root.sys-line1;
+                    sys-line2: root.sys-line2;
+                    sys-line3: root.sys-line3;
                     height: 226px;
                     min-width: 0;
-                    HorizontalLayout {
-                        spacing: 10px;
-                        for gauge in [
-                            { arc: root.cpu-arc, text: root.cpu-text, label: "CPU", tint: #38bdf8 },
-                            { arc: root.ram-arc, text: root.ram-text, label: "RAM", tint: #34d399 },
-                            { arc: root.disk-arc, text: root.disk-text, label: "STORAGE", tint: #fbbf24 }
-                        ]: VerticalLayout {
-                            horizontal-stretch: 1;
-                            Rectangle {
-                                // A fixed square: a stretched box would turn the
-                                // gauge's arcs into ellipses.
-                                width: 84px;
-                                height: 84px;
-                                x: (parent.width - self.width) / 2;
-                                Path {
-                                    viewbox-width: 100;
-                                    viewbox-height: 100;
-                                    commands: "M 23.13 76.87 A 38 38 0 1 1 76.87 76.87";
-                                    stroke: #1e293b;
-                                    stroke-width: 8px;
-                                    fill: transparent;
-                                }
-                                Path {
-                                    viewbox-width: 100;
-                                    viewbox-height: 100;
-                                    commands: gauge.arc;
-                                    stroke: gauge.tint;
-                                    stroke-width: 8px;
-                                    stroke-line-cap: LineCap.round;
-                                    fill: transparent;
-                                }
-                                Text {
-                                    text: gauge.text;
-                                    color: #e2e8f0;
-                                    font-size: 20px;
-                                    font-weight: 700;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                }
-                            }
-                            Text {
-                                text: gauge.label;
-                                color: #64748b;
-                                font-size: 10px;
-                                font-weight: 700;
-                                letter-spacing: 1px;
-                                horizontal-alignment: center;
-                                height: 14px;
-                            }
-                        }
-                    }
-                    Text { text: root.sys-line1; color: #94a3b8; font-size: 12px; overflow: elide; height: 16px; }
-                    Text { text: root.sys-line2; color: #94a3b8; font-size: 12px; overflow: elide; height: 16px; }
-                    Text { text: root.sys-line3; color: #94a3b8; font-size: 12px; overflow: elide; height: 16px; }
                 }
 
-
                 // Real interfaces only: the ethers and the loopback. VLANs, bridges
-                // and PPPoE get their own card below.
-                IfaceCard {
+        // and PPPoE get their own card below.
+        IfaceCard {
                     heading: "INTERFACES";
                     rows: root.ifaces;
                     height: 210px;
@@ -728,50 +247,18 @@ export component DashboardWindow inherits Window {
                     height: 210px;
                     min-width: 0;
                 }
-
-
-
             }
 
-            Card {
-                heading: "TOP TALKERS";
+            TalkersCard {
+                talkers: root.talkers;
                 horizontal-stretch: 1;
                 min-width: root.column-width;
                 max-width: root.column-width;
-                    HorizontalLayout {
-                        height: 14px;
-                        spacing: 8px;
-                        Text { text: "DEVICE"; color: #475569; font-size: 10px; font-weight: 700; horizontal-stretch: 1; }
-                        Text { text: "MAC"; color: #475569; font-size: 10px; font-weight: 700; preferred-width: 118px; min-width: 110px; }
-                        Text { text: "DOWN"; color: #475569; font-size: 10px; font-weight: 700; preferred-width: 74px; min-width: 62px; horizontal-alignment: right; }
-                        Text { text: "UP"; color: #475569; font-size: 10px; font-weight: 700; preferred-width: 74px; min-width: 62px; horizontal-alignment: right; }
-                    }
-                    ScrollView {
-                        height: Math.min(Math.max(0px, root.talkers.length * 26px - 6px), 600px);
-                        enabled: root.talkers.length * 26px - 6px > 600px;
-                        mouse-drag-pan-enabled: root.talkers.length * 26px - 6px > 600px;
-                        VerticalLayout {
-                            spacing: 6px;
-                            for row in root.talkers: HorizontalLayout {
-                                height: 20px;
-                                spacing: 8px;
-                                Text { text: row.c1; color: #e2e8f0; font-size: 12px; horizontal-stretch: 1; min-width: 90px; overflow: elide; vertical-alignment: center; }
-                                Text { text: row.c2; color: #64748b; font-size: 11px; preferred-width: 118px; min-width: 110px; vertical-alignment: center; }
-                                Text { text: row.c3; color: #38bdf8; font-size: 12px; preferred-width: 74px; min-width: 62px; horizontal-alignment: right; vertical-alignment: center; }
-                                Text { text: row.c4; color: #34d399; font-size: 12px; preferred-width: 74px; min-width: 62px; horizontal-alignment: right; vertical-alignment: center; }
-                            }
-                        }
-                    }
             }
         }
 
-        // ── status line ───────────────────────────────────────────────────────
-        Text {
-            text: root.status;
-            color: #475569;
-            font-size: 11px;
-            height: 14px;
-            vertical-alignment: center;
+        StatusLine {
+            message: root.status;
         }
     }
 }

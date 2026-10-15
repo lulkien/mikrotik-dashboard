@@ -1,0 +1,95 @@
+import { Card } from "../components/card.slint";
+import { Theme } from "../theme.slint";
+
+export component SystemCard inherits Card {
+    in property <string> cpu-arc: "";
+    in property <string> ram-arc: "";
+    in property <string> disk-arc: "";
+    in property <string> cpu-text: "0%";
+    in property <string> ram-text: "0%";
+    in property <string> disk-text: "0%";
+    in property <string> sys-line1: "";
+    in property <string> sys-line2: "";
+    in property <string> sys-line3: "";
+    heading: "SYSTEM";
+// heading 14 + gauges 104 + three lines 48 + four 6px gutters
+// + 28px padding = 218, plus breathing room.
+HorizontalLayout {
+        spacing: 10px;
+        for gauge in [
+            { arc: root.cpu-arc, text: root.cpu-text, label: "CPU", tint: Theme.accent },
+            { arc: root.ram-arc, text: root.ram-text, label: "RAM", tint: Theme.success },
+            { arc: root.disk-arc, text: root.disk-text, label: "STORAGE", tint: Theme.warning }
+        ]: VerticalLayout {
+            horizontal-stretch: 1;
+            Rectangle {
+            // A fixed square: a stretched box would turn the
+            // gauge's arcs into ellipses.
+            width: 84px;
+                height: 84px;
+                x: (parent.width - self.width) / 2;
+                Path {
+                    viewbox-width: 100;
+                    viewbox-height: 100;
+                    commands: "M 23.13 76.87 A 38 38 0 1 1 76.87 76.87";
+                    stroke: Theme.border;
+                    stroke-width: 8px;
+                    fill: transparent;
+                }
+
+                Path {
+                    viewbox-width: 100;
+                    viewbox-height: 100;
+                    commands: gauge.arc;
+                    stroke: gauge.tint;
+                    stroke-width: 8px;
+                    stroke-line-cap: LineCap.round;
+                    fill: transparent;
+                }
+
+                Text {
+                    text: gauge.text;
+                    color: Theme.text;
+                    font-size: Theme.fs-3xl;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            Text {
+                text: gauge.label;
+                color: Theme.text-subtle;
+                font-size: Theme.fs-2xs;
+                font-weight: 700;
+                letter-spacing: Theme.tracking;
+                horizontal-alignment: center;
+                height: 14px;
+            }
+        }
+    }
+
+    Text {
+        text: root.sys-line1;
+        color: Theme.text-muted;
+        font-size: Theme.fs-sm;
+        overflow: elide;
+        height: 16px;
+    }
+
+    Text {
+        text: root.sys-line2;
+        color: Theme.text-muted;
+        font-size: Theme.fs-sm;
+        overflow: elide;
+        height: 16px;
+    }
+
+    Text {
+        text: root.sys-line3;
+        color: Theme.text-muted;
+        font-size: Theme.fs-sm;
+        overflow: elide;
+        height: 16px;
+    }
+}
