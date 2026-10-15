@@ -1,0 +1,27 @@
+[package]
+name = "mikrotik-dashboard"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Native Slint dashboard for MikroTik RouterOS, reading the RouterOS binary API directly"
+license = "Unlicense"
+repository = "https://github.com/lulkien/mikrotik-dashboard"
+
+[dependencies]
+slint = "1.17.1"
+
+[build-dependencies]
+slint-build = "1.17.1"
+
+[[bin]]
+name = "mikrotik-dashboard"
+path = "src/main.rs"
+
+[[bin]]
+name = "ros-sim"
+path = "src/bin/ros_sim.rs"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
